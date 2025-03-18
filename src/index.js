@@ -24,8 +24,6 @@ function calculateDistance(point1, point2) {
     
     let ans = 2 * radius * Math.asin(Math.sqrt(insideRoot));
     return ans;
-
-    
 }
 
 /**
@@ -38,6 +36,30 @@ function calculateDistance(point1, point2) {
  */
 function getRecommendedEvents(user, events, eventSimilarity, limit = 5) {
     // Your implementation here
+
+    let preferencesExt;
+    // checking whether the user has any preferences
+    if (user.preferences.length > 0)
+        preferencesExt = [...user.preferences];
+
+    //checking whether the user has attended any events in the past
+    if (user.attendedEvents.length > 0) {
+        user.attendedEvents.forEach(Id => {
+            const attendedEvent = events.find(event => event.id === Id);
+            //checking whether the attendedEvent has any other categories that
+            //can be added to preferences array
+            if (attendedEvent && attendedEvent.categories) {
+                attendedEvent.categories.forEach(category => {
+                    if (!preferencesExt.includes(category)) {
+                        preferencesExt.push(category);
+                    }
+                });
+            }
+        });
+    }
+
+
+
 }
 
 module.exports = {
