@@ -6,6 +6,26 @@
  */
 function calculateDistance(point1, point2) {
     // Implement the Haversine formula to calculate geographic distance
+
+    const convertToRad = Math.PI / 180;
+    const radius = 6371;
+
+    let lat1 = point1.lat * convertToRad;
+    let long1 = point1.lng * convertToRad;
+
+    let lat2 = point2.lat * convertToRad;
+    let long2 = point2.lng * convertToRad;
+
+    diffLat = lat2 - lat1;
+    diffLong = long2 - long1;
+
+    let insideRoot = Math.pow(Math.sin(diffLat / 2), 2) +
+                        Math.pow(Math.sin(diffLong / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
+    
+    let ans = 2 * radius * Math.asin(Math.sqrt(insideRoot));
+    return ans;
+
+    
 }
 
 /**
