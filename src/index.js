@@ -38,36 +38,46 @@ function calculateDistance(point1, point2) {
 function getRecommendedEvents(user, events, eventSimilarity, limit = 5) {
     // Your implementation here
 
-    //
+    //eventMap for O(1) lookups
     const eventMap = new Map();
     events.forEach((event) => {
         eventMap.set(event.id, event);
     });
 
     let recommendations = [];
-    let preferencesExt;
+    let preferencesExt = new Map();
     let maxDistance = 0;
     let candidateEvents = new Set();
 
-    // checking whether the user has any preferences
-    preferencesExt = user.preferences.length > 0 ? new Set(user.preferences) : new Set();
+    /*
+    1. checking whether the user has any preferences
+    2. if yes then create a map to store the preference and its count
+    3. this map will be later used in calculating the final weighted score
+    */
+    if (user.preferences && user.preferences.length > 0) {
+        user.preferences.forEach((preference) => {
+            preferencesExt.set(preference, 1);
+        })
+    }
 
     /* 
     1. checking whether the user has attended any events in the past
-    2. if he has attended then add those categories of the events in the preferencesExt array
-    3. then of those attended events find the maximum distance the user has gone to for an event
+    2. If he has attended then append those categories of the events in the preferencesExt array
+    3. Then of those attended events find the maximum distance the user has gone to for an event
     4. find candidateEvents based on events similar to the attended events 
     */
 
-    if (user.attendedEvents.length > 0) {
+    if (user.attendedEvents && user.attendedEvents.length > 0) {
         user.attendedEvents.forEach((Id) => {
-            // eventMap to be used here
             const attendedEvent = eventMap.get(Id);
 
-            if (attendedEvent && attendedEvent.categories) {
+            if (attendedEvent && attendedEvent.categories.length > 0) {
                 attendedEvent.categories.forEach((category) => {
                     if (preferencesExt.size === 0 || !preferencesExt.has(category)) {
-                        preferencesExt.add(category);
+                        preferencesExt.set(category, 1);
+                    }
+                    else {
+                        preferencesExt.set(category, preferencesExt.get(category) + 1);
                     }
                 });
             }
@@ -90,62 +100,63 @@ function getRecommendedEvents(user, events, eventSimilarity, limit = 5) {
     // assuming a user would be willing to go a distance 25% more than the maximum distance
     let DISTANCE_LIMIT = maxDistance * 1.25;
 
+    /*   
+    if the user has not attended any events then the maximum distance that the user would be willing
+    to go for an event is assumed is 25 Km which will be manipulated later in the function
+    */
     if (user.attendedEvents.length === 0) {
-        // find new maximum distance based on the nearest user with attended events
-        // lets take this to be 0, assuming that user has certain preferences but shifted to 
-        // a new city and hence has no events and just putting distance_limit to 25 km;
         DISTANCE_LIMIT = 25;
     }
 
-    //testing
-    // for user[0] the nearest users are in the radius of 57 km
-    // for a real-scenario I'm finding users in a 5 km radius, with similar preferences
-    // and their corresponding attendedEvents
-
-    // for no preferenes we can do either the below thing or 
-    // use event similarity and add them in the candidateEvents set as done above
-    // if (preferencesExt.size === 0) {
-    //     const newEvents = new Set(generateEventsFromNearbyUsers(user, users, DISTANCE_LIMIT));
-    //     // console.log(newEvents);
-    //     candidateEvents = new Set([...candidateEvents, ...newEvents]); 
-    // }
-
-    // find similar events based on preferences and add it to candidate events
-    // the above approach of finding nearby users with similar preferences doesn't work here
-    // because while testing I found that none of the users attended the events that aligns with their preferences
-    // I need to find similar events related to their preferences
-    // if (user.preferences.length > 0) {
-    //     const similarEvents = new Set(generateSimilarEvents(user.preferences, eventSimilarity, events));
-    // }
-    // printEventDetails(newEvents, eventMap);
-
-    //scoring events based on similarity, distance and preference matching
-
-    // scoreEvents(user, events, recommendations, preferencesExt, candidateEvents, DISTANCE_LIMIT);
-
+    /*
+    this set will be used to mark events that have been traversed and their points
+    fulfilling the criteria of a good recommendation will not be calculated again
+    */
     const markEvents = new Set();
 
-    const generateRecommendationsbyDistance = ((distance_limit) => {
+    /*  
+    using the below function to return atleast 'limit' number of events, here 5, 
+    because while testing I found cases when there are no events in proximity of the user and 
+    hence the algorithm returned less than 5 events so unless there are atleast 5 events 
+    in the recommendations array, the below will keep on running and if the DISTANCE_LIMIT becomes 
+    too large, just break from the loop 
+    */
+    const generateRecommendationsbyDistance = (distance_limit) => {
         const newRecommendations = [];
-        scoreEvents(user, events, newRecommendations, preferencesExt, markEvents, candidateEvents, distance_limit);
+        scoreEvents(
+            user,
+            events,
+            newRecommendations,
+            preferencesExt,
+            markEvents,
+            candidateEvents,
+            distance_limit
+        );
         recommendations.push(...newRecommendations);
-    });
+    };
 
     generateRecommendationsbyDistance(DISTANCE_LIMIT);
 
     while (recommendations.length < limit) {
         DISTANCE_LIMIT *= 1.5;
         generateRecommendationsbyDistance(DISTANCE_LIMIT);
+
+        if (DISTANCE_LIMIT > 4500) break;
     }
 
-
-    // better to use a weighted score rather than judging the event only by its popularity
-
+    /*
+    using a weighted score to better judge the event rather than completely depending on the
+    popularity of the event, refer to the implementation of scoreEvents method for weighted score calculation
+    */
     recommendations.sort((a, b) => b.score - a.score);
     return recommendations.slice(0, limit).map((item) => item.event);
-    // return recommendations.slice(0, limit);
 }
 
+/* 
+1.This function below scores the events based on the user preferences, candidateEvents (past behaviour),
+and the proximity from the user location.
+2.Also, for different kinds of users, different weights have been assumed for a more realistic recommendation.
+*/
 function scoreEvents(user, events, newRecommendations, preferencesExt, markEvents, candidateEvents, distanceLimit) {
     events.forEach((event) => {
 
@@ -154,7 +165,6 @@ function scoreEvents(user, events, newRecommendations, preferencesExt, markEvent
         if (user.attendedEvents.length > 0 && user.attendedEvents.includes(event.id)) return;
 
         const distance = calculateDistance(user.location, event.location);
-
         if (distance > distanceLimit) return;
 
         let preferencePoints = 0;
@@ -162,7 +172,7 @@ function scoreEvents(user, events, newRecommendations, preferencesExt, markEvent
             if (event.categories) {
                 event.categories.forEach((category) => {
                     if (preferencesExt.has(category)) {
-                        preferencePoints += 1;
+                        preferencePoints += preferencesExt.get(category);
                     }
                 });
             }
@@ -170,65 +180,27 @@ function scoreEvents(user, events, newRecommendations, preferencesExt, markEvent
 
         const similarityPoints = candidateEvents.has(event.id) ? 1 : 0;
         const distancePoints = 1 - distance / distanceLimit;
-        let totalPoints = 0;
+        let weightedScore = 0;
 
-        if (preferencePoints === 0) {
-            totalPoints = distancePoints * 0.45 + event.popularity * 0.35 + similarityPoints * 0.2;
+        // will run in testcase2
+        if (preferencePoints !== 0 && candidateEvents.size === 0) {
+            weightedScore = distancePoints * 0.3 + event.popularity * 0.35 + preferencePoints * 0.4;
         }
+        // will run in testcase4
+        else if (preferencePoints === 0) {
+            weightedScore = distancePoints * 0.45 + event.popularity * 0.35 + similarityPoints * 0.2;
+        }
+        // will run in testcase1 and testcase3
         else {
-            totalPoints = preferencePoints * 0.4 + similarityPoints * 0.15 + distancePoints * 0.35 + event.popularity * 0.1;
+            weightedScore = preferencePoints * 0.4 + distancePoints * 0.35 + similarityPoints * 0.15 + event.popularity * 0.1;
         }
 
         newRecommendations.push({
             event,
-            distancePoints: distance.toFixed(4),
-            // similarityPoints: similarityPoints,
-            // preferencePoints: preferencePoints,
-            score: totalPoints,
+            score: weightedScore,
         });
 
         markEvents.add(event.id);
-    });
-}
-
-//testing
-
-// this function returns events based on the events attended by the users in a given distance from the user.
-function generateEventsFromNearbyUsers(user, users, radius) {
-    const favorableEvents = new Set();
-
-    const similarUsers = users.filter((neighbour) => {
-        if (neighbour.id === user.id) {
-            return false;
-        }
-
-        if (calculateDistance(user.location, neighbour.location) > radius) {
-            return false;
-        }
-
-        return (
-            neighbour.preferences &&
-            user.preferences &&
-            neighbour.preferences.some((pref) => user.preferences.includes(pref))
-        );
-    });
-
-    similarUsers.forEach((similarUser) => {
-        if (similarUser.attendedEvents.length > 0) {
-            similarUser.attendedEvents.forEach((eventId) => {
-                favorableEvents.add(eventId);
-            });
-        }
-    });
-    return favorableEvents;
-}
-
-function printEventDetails(events1, eventMap) {
-    const eventArray = Array.from(events1);
-    console.log(eventArray);
-    eventArray.forEach((id) => {
-        console.log(eventMap.get(id));
-        console.log();
     });
 }
 
