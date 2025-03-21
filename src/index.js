@@ -138,7 +138,7 @@ function getRecommendedEvents(user, events, eventSimilarity, limit = 5) {
     generateRecommendationsbyDistance(DISTANCE_LIMIT);
 
     while (recommendations.length < limit) {
-        DISTANCE_LIMIT *= 1.5;
+        DISTANCE_LIMIT *= 1.25;
         generateRecommendationsbyDistance(DISTANCE_LIMIT);
 
         if (DISTANCE_LIMIT > 4500) break;
@@ -188,7 +188,7 @@ function scoreEvents(user, events, newRecommendations, preferencesExt, markEvent
         }
         // will run in testcase4
         else if (preferencePoints === 0) {
-            weightedScore = distancePoints * 0.45 + event.popularity * 0.35 + similarityPoints * 0.2;
+            weightedScore = distancePoints * 0.45 + event.popularity * 0.55;
         }
         // will run in testcase1 and testcase3
         else {
