@@ -1,6 +1,6 @@
-# Event Recommendation System
+# Event Recommendation Algorithm
 
-## Algorithm Approach
+## Approach
 This was a really nice challenge to solve, I'm a bit rusty with Javascript and so did not get too complicated and just used arrays, sets and maps. This challenge felt more like a product design after a certain point.
 
 ### Key Components
@@ -9,7 +9,7 @@ This was a really nice challenge to solve, I'm a bit rusty with Javascript and s
    - Implements the Haversine formula to calculate the geographic distance between two points
 
 2. **Preference Extension**
-   - Combines given user preferences with categories from previously attended events
+   - Combines given user preferences with categories from previously attended events if any
    - Maintains a frequency count for each preference to give more weight to recurring interests
 
 3. **Maximum Travel Distance Determination**
@@ -23,8 +23,9 @@ This was a really nice challenge to solve, I'm a bit rusty with Javascript and s
 5. **Weighted Scoring System**
    - Different scoring weights based on user types:
      - Users with preferences but no attendance history
-     - Users with attendance history but no explicit preferences
+     - Users with attendance history but no given preferences
      - Users with both preferences and attendance history
+     - Users with neither history nor given preferences
 
 ### Optimizations
 
@@ -37,7 +38,7 @@ This was a really nice challenge to solve, I'm a bit rusty with Javascript and s
 
 1. **Distance Preferences**
    - Users are willing to travel up to 25% further than their maximum historical travel distance
-   - New users with no attendance history are initially assumed to travel up to 25km
+   - New users and users with no attendance history are initially assumed to travel up to 25km
    - Distance limit is progressively expanded if insufficient recommendations are found
 
 2. **Scoring Weights**

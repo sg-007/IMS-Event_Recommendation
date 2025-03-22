@@ -102,15 +102,15 @@ function getRecommendedEvents(user, events, eventSimilarity, limit = 5) {
 
     /*   
     if the user has not attended any events then the maximum distance that the user would be willing
-    to go for an event is assumed is 25 Km which will be manipulated later in the function
+    to go for an event is assumed to be 25 Km which will be manipulated later in the function
     */
     if (user.attendedEvents.length === 0) {
         DISTANCE_LIMIT = 25;
     }
 
     /*
-    this set will be used to mark events that have been traversed and their points
-    fulfilling the criteria of a good recommendation will not be calculated again
+    this set will be used to mark events that have been traversed and their score
+    will not be calculated again
     */
     const markEvents = new Set();
 
@@ -138,7 +138,7 @@ function getRecommendedEvents(user, events, eventSimilarity, limit = 5) {
     generateRecommendationsbyDistance(DISTANCE_LIMIT);
 
     while (recommendations.length < limit) {
-        DISTANCE_LIMIT *= 1.25;
+        DISTANCE_LIMIT *= 1.5;
         generateRecommendationsbyDistance(DISTANCE_LIMIT);
 
         if (DISTANCE_LIMIT > 4500) break;
@@ -184,7 +184,7 @@ function scoreEvents(user, events, newRecommendations, preferencesExt, markEvent
 
         // will run in testcase2
         if (preferencePoints !== 0 && candidateEvents.size === 0) {
-            weightedScore = distancePoints * 0.3 + event.popularity * 0.35 + preferencePoints * 0.4;
+            weightedScore = distancePoints * 0.25 + event.popularity * 0.35 + preferencePoints * 0.4;
         }
         // will run in testcase4
         else if (preferencePoints === 0) {
